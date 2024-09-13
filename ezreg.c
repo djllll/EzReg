@@ -1,20 +1,20 @@
 
-#include "user_register.h"
+#include "ezreg.h"
 #include "stdlib.h"
 
-static user_register_t *head = NULL;
+static ez_reg_t *head = NULL;
 static uint16_t bytes_num_need_save = 0; // count of bytes need to save
-static uint8_t save_flash_check = 0x04;     // check the flash saved flag ,default value is a seed;
+static uint8_t save_flash_check = 0x04;  // check the flash saved flag ,default value is a seed;
 
-user_register_t *user_register_create(uint16_t start_addr, reg_perm_t perm, uint8_t *bindings, uint8_t bytelen);
-user_register_t *user_register_create_patch(uint16_t start_addr, reg_perm_t perm, uint8_t **bindings, uint16_t bind_len, uint8_t bind_size);
-void user_register_destroy_all(void);
-void user_register_operation(uint16_t addr, uint8_t *data, uint16_t len, reg_op_t op);
-reg_save_load_ret_t user_register_save(void);
-reg_save_load_ret_t user_register_load(void);
+ez_reg_t *ez_reg_create(uint16_t start_addr, reg_perm_t perm, void *bindings, uint16_t bytelen);
+ez_reg_t *ez_reg_create_patch(uint16_t start_addr, reg_perm_t perm, void **bindings, uint16_t bind_len, uint16_t bind_size);
+void ez_reg_destroy_all(void);
+void ez_reg_operation(uint16_t addr, uint8_t *data, uint16_t len, reg_op_t op);
+reg_save_load_ret_t ez_reg_save(void);
+reg_save_load_ret_t ez_reg_load(void);
 
-static reg_save_load_ret_t user_register_port_save(uint8_t *data, uint16_t len);
-static reg_save_load_ret_t user_register_port_load(uint8_t *data, uint16_t len);
+static reg_save_load_ret_t ez_reg_port_save(uint8_t *data, uint16_t len);
+static reg_save_load_ret_t ez_reg_port_load(uint8_t *data, uint16_t len);
 
 
 /**
@@ -23,26 +23,26 @@ static reg_save_load_ret_t user_register_port_load(uint8_t *data, uint16_t len);
  * @param start_addr
  * @param bytelen
  * @param perm
- * @return user_register_t*
+ * @return ez_reg_t*
  */
-user_register_t *user_register_create(uint16_t start_addr, reg_perm_t perm, uint8_t *bindings, uint8_t bytelen)
+ez_reg_t *ez_reg_create(uint16_t start_addr, reg_perm_t perm, void *bindings, uint16_t bytelen)
 {
     if (bytelen == 0) {
         return NULL;
     }
-    user_register_t *reg = (user_register_t *)malloc(sizeof(user_register_t));
+    ez_reg_t *reg = (ez_reg_t *)malloc(sizeof(ez_reg_t));
     if (reg == NULL) {
         return NULL;
     }
     reg->addr = start_addr;
     reg->bytelen = bytelen;
-    reg->p_reg = bindings;
+    reg->p_reg = (uint8_t*)bindings;
     reg->next = NULL;
     reg->perm = perm;
     if ((perm & REG_PERM_S) != 0) {
         bytes_num_need_save += bytelen;
         save_flash_check = (uint8_t)(save_flash_check + start_addr);
-        if(save_flash_check==0xff){  //avoid erased flash 0xff
+        if (save_flash_check == 0xff) { // avoid erased flash 0xff
             save_flash_check--;
         }
     }
@@ -51,15 +51,15 @@ user_register_t *user_register_create(uint16_t start_addr, reg_perm_t perm, uint
     } else {
         if (reg->addr < head->addr) {
             /* head insert */
-            user_register_t *temp = head;
+            ez_reg_t *temp = head;
             head = reg;
             head->next = temp;
         } else {
             /* insert sorted by addr */
-            user_register_t *p = head;
+            ez_reg_t *p = head;
             while (p->next != NULL) {
                 if (reg->addr < p->next->addr) {
-                    user_register_t *temp = p->next;
+                    ez_reg_t *temp = p->next;
                     p->next = reg;
                     reg->next = temp;
                     return reg;
@@ -81,13 +81,13 @@ user_register_t *user_register_create(uint16_t start_addr, reg_perm_t perm, uint
  * @param bindings
  * @param bind_len
  * @param bind_size
- * @return user_register_t*  register last created
+ * @return ez_reg_t*  register last created
  */
-user_register_t *user_register_create_patch(uint16_t start_addr, reg_perm_t perm, uint8_t **bindings, uint16_t bind_len, uint8_t bind_size)
+ez_reg_t *ez_reg_create_patch(uint16_t start_addr, reg_perm_t perm, void **bindings, uint16_t bind_len, uint16_t bind_size)
 {
-    user_register_t *last_create = NULL;
+    ez_reg_t *last_create = NULL;
     for (uint16_t i = 0; i < bind_len; i++) {
-        last_create = user_register_create(start_addr + bind_size * i, perm, bindings[i], bind_size);
+        last_create = ez_reg_create(start_addr + bind_size * i, perm, bindings[i], bind_size);
     }
     return last_create;
 }
@@ -97,11 +97,11 @@ user_register_t *user_register_create_patch(uint16_t start_addr, reg_perm_t perm
  * @brief destroy registers
  *
  */
-void user_register_destroy_all(void)
+void ez_reg_destroy_all(void)
 {
-    user_register_t *p = head;
+    ez_reg_t *p = head;
     while (p != NULL) {
-        user_register_t *next = p->next;
+        ez_reg_t *next = p->next;
         free(p);
         p = next;
     }
@@ -118,9 +118,9 @@ void user_register_destroy_all(void)
  * @param len
  * @param op
  */
-void user_register_operation(uint16_t addr, uint8_t *data, uint16_t len, reg_op_t op)
+void ez_reg_operation(uint16_t addr, uint8_t *data, uint16_t len, reg_op_t op)
 {
-    user_register_t *p = head;
+    ez_reg_t *p = head;
     while (p != NULL) {
         if (p->addr >= addr && p->addr <= addr + len) {
             uint16_t p_end = p->addr + p->bytelen;
@@ -145,14 +145,14 @@ void user_register_operation(uint16_t addr, uint8_t *data, uint16_t len, reg_op_
  * @brief save all registers with PERM_S
  *
  */
-reg_save_load_ret_t user_register_save(void)
+reg_save_load_ret_t ez_reg_save(void)
 {
     if (bytes_num_need_save == 0) {
         return REG_SAVE_ERR;
     }
     uint8_t bytesbuf[bytes_num_need_save + 1];
     uint16_t bufp = 0;
-    user_register_t *p = head;
+    ez_reg_t *p = head;
     while (p != NULL) {
         if ((p->perm & REG_PERM_S) != 0) {
             for (uint16_t i = 0; i < p->bytelen; i++) {
@@ -167,7 +167,7 @@ reg_save_load_ret_t user_register_save(void)
         p = p->next;
     }
     bytesbuf[0] = save_flash_check;
-    return user_register_port_save(bytesbuf, bytes_num_need_save + 1);
+    return ez_reg_port_save(bytesbuf, bytes_num_need_save + 1);
 }
 
 
@@ -175,18 +175,18 @@ reg_save_load_ret_t user_register_save(void)
  * @brief load all registers with PERM_S
  *
  */
-reg_save_load_ret_t user_register_load(void)
+reg_save_load_ret_t ez_reg_load(void)
 {
     if (bytes_num_need_save == 0) {
         return REG_LOAD_ERR;
     }
     uint8_t bytesbuf[bytes_num_need_save + 1];
-    user_register_port_load(bytesbuf, bytes_num_need_save + 1);
+    ez_reg_port_load(bytesbuf, bytes_num_need_save + 1);
     if (bytesbuf[0] != save_flash_check) {
         return REG_LOAD_ERR;
     }
     uint16_t bufp = 0;
-    user_register_t *p = head;
+    ez_reg_t *p = head;
     while (p != NULL) {
         if ((p->perm & REG_PERM_S) != 0) {
             for (uint16_t i = 0; i < p->bytelen; i++) {
@@ -207,7 +207,6 @@ reg_save_load_ret_t user_register_load(void)
 /* ************************* port ******************************* */
 
 /* user include */
-#include "flash_operation.h"
 
 /**
  * @brief port function to save
@@ -216,9 +215,9 @@ reg_save_load_ret_t user_register_load(void)
  * @param len
  * @return reg_save_load_ret_t
  */
-static reg_save_load_ret_t user_register_port_save(uint8_t *data, uint16_t len)
+static reg_save_load_ret_t ez_reg_port_save(uint8_t *data, uint16_t len)
 {
-    return flash_save(FLASH_AREA_1,data, len) == FLASH_OK ? REG_SAVE_LOAD_OK : REG_SAVE_ERR;
+    return REG_SAVE_ERR;
 }
 
 
@@ -229,7 +228,7 @@ static reg_save_load_ret_t user_register_port_save(uint8_t *data, uint16_t len)
  * @param len
  * @return reg_save_load_ret_t
  */
-static reg_save_load_ret_t user_register_port_load(uint8_t *data, uint16_t len)
+static reg_save_load_ret_t ez_reg_port_load(uint8_t *data, uint16_t len)
 {
-    return flash_load(FLASH_AREA_1,data, len,0) == FLASH_OK ? REG_SAVE_LOAD_OK : REG_LOAD_ERR;
+    return REG_LOAD_ERR;
 }
