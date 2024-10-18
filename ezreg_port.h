@@ -5,7 +5,7 @@
 
 /* config */
 #define USE_EXTERNAL_COMMU 1
-#define CMD_DATA_BUF_LEN           70
+#define CMD_DATA_BUF_LEN   70
 
 
 typedef enum {

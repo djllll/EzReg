@@ -44,3 +44,61 @@ C语言模拟寄存器
 
 ### ez_reg_destroy_all
 销毁所有寄存器
+
+
+## 可选外部通信协议
+### 读寄存器操作
+指令如下：
+||数值|说明|
+|:--:|:--:|:--:|
+|byte[0]|0x7B|包头|
+|byte[1]|0xA0|包头|
+|byte[2]|ID|手ID|
+|byte[3]|0x04|数据长度|
+|byte[4]|0x11|读寄存器|
+|byte[5]|ADDR_L|寄存器起始地址低八位|
+|byte[6]|ADDR_H|寄存器起始地址高八位|
+|byte[7]|Reg_Length|读取寄存器长度|
+|byte[8]|Check_Sum|除包头以外校验和|
+
+
+### 回复如下：
+||数值|说明|
+|:--:|:--:|:--:|
+|byte[0]|0xA0|包头|
+|byte[1]|0x7B|包头|
+|byte[2]|ID|手ID|
+|byte[3]|Reg_Length+3|数据长度|
+|byte[4]|0x11|读寄存器回复|
+|byte[5]|ADDR_L|寄存器起始地址低八位|
+|byte[6]|ADDR_H|寄存器起始地址高八位|
+|byte[7]~byte[7+Reg_Length-1]| \ |寄存器值|
+|byte[7+Reg_Length]|Check Sum|除包头以外校验和|
+
+### 写寄存器操作
+指令如下：
+||数值|说明|
+|:--:|:--:|:--:|
+|byte[0]|0x7B|包头|
+|byte[1]|0xA0|包头|
+|byte[2]|ID|手ID|
+|byte[3]|Reg_Length+3|数据长度|
+|byte[4]|0x12|写寄存器|
+|byte[5]|ADDR_L|寄存器起始地址低八位|
+|byte[6]|ADDR_H|寄存器起始地址高八位|
+|byte[7]~byte[7+Reg_Length-1]| \ |寄存器值|
+|byte[7+Reg_Length]|Check Sum|除包头以外校验和|
+
+
+### 回复如下：
+||数值|说明|
+|:--:|:--:|:--:|
+|byte[0]|0xA0|包头|
+|byte[1]|0x7B|包头|
+|byte[2]|ID|手ID|
+|byte[3]|0x04|数据长度|
+|byte[4]|0x12|写寄存器回复|
+|byte[5]|ADDR_L|寄存器起始地址低八位|
+|byte[6]|ADDR_H|寄存器起始地址高八位|
+|byte[7]|1|固定值|
+|byte[8]|Check_Sum|除包头以外校验和|
