@@ -31,7 +31,7 @@ void ez_reg_destroy_all(void);
 void ez_reg_operation(uint16_t addr, uint8_t *data, uint16_t len, reg_op_t op);
 reg_ret_t ez_reg_save(void);
 reg_ret_t ez_reg_load(void);
-reg_ret_t ez_reg_set_slave_id(uint8_t id);
+void ez_reg_set_slave_id(uint8_t id);
 
 
 /**
@@ -228,7 +228,7 @@ reg_ret_t ez_reg_load(void)
  * @param id
  * @return reg_ret_t
  */
-reg_ret_t ez_reg_set_slave_id(uint8_t id)
+void ez_reg_set_slave_id(uint8_t id)
 {
     slave_id = id;
 }
