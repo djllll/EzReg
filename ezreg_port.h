@@ -6,7 +6,8 @@
 /* config */
 #define USE_EXTERNAL_COMMU 1
 #define CMD_DATA_BUF_LEN   70
-
+#define CMD_HEAD1 0x7B
+#define CMD_HEAD2 0xA0
 
 typedef enum {
     REG_OK = 0,

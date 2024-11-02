@@ -16,8 +16,7 @@ static uint8_t save_flash_check = 0x04;  // check the flash saved flag ,default 
 #define WAITING_DATA      5
 #define WAITING_CHECK_SUM 6
 
-#define CMD_HEAD1 0x7B
-#define CMD_HEAD2 0xA0
+
 #define CMD_READ  0x11
 #define CMD_WRITE 0x12
 static uint8_t match_status = 0;
