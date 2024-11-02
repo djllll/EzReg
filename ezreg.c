@@ -138,16 +138,17 @@ void ez_reg_operation(uint16_t addr, uint8_t *data, uint16_t len, reg_op_t op)
 {
     ez_reg_t *p = head;
     while (p != NULL) {
-        if (p->addr >= addr && p->addr <= addr + len) {
-            uint16_t p_end = p->addr + p->bytelen;
-            uint16_t op_end = addr + len;
-            uint16_t real_len = op_end > p_end ? p_end - p->addr : op_end - p->addr;
+        if (p->addr <= addr && addr < p->addr + p->bytelen) {
+            uint16_t real_len = (addr + len) > (p->addr + p->bytelen) ? (addr + len) - (p->addr + p->bytelen) : len;
             for (uint16_t i = 0; i < real_len; i++) {
                 if (op == OP_REG_READ && ((p->perm & REG_PERM_R) != 0)) {
-                    data[p->addr - addr + i] = p->p_reg[i];
+                    data[i] = p->p_reg[i + addr - p->addr];
                 } else if (op == OP_REG_WRITE && (p->perm & REG_PERM_W) != 0) {
-                    p->p_reg[i] = data[p->addr - addr + i];
+                    p->p_reg[i + addr - p->addr] = data[i];
                 }
+            }
+            if (real_len < len) {
+                ez_reg_operation(addr+real_len, data + len, len - real_len, op);
             }
         } else if (p->addr > addr + len) {
             break;
